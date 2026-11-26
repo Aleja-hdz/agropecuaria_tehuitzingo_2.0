@@ -1,0 +1,130 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Brand {
+  id   String @id @default(uuid()) @db.Uuid
+  name String
+  slug String @unique
+
+  products Product[]
+
+  @@map("brands")
+}
+
+model Category {
+  id       String  @id @default(uuid()) @db.Uuid
+  name     String
+  slug     String  @unique
+  parentId String? @db.Uuid @map("parent_id")
+
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryHierarchy")
+  products Product[]
+
+  @@map("categories")
+}
+
+model Service {
+  id          String  @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  isActive    Boolean @default(true) @map("is_active")
+
+  @@map("services")
+}
+
+model ContactRequest {
+  id      String @id @default(uuid()) @db.Uuid
+  name    String
+  email   String
+  message String
+  status  String @default("PENDING")
+
+  @@map("contact_requests")
+}
+
+model Species {
+  id   String @id @default(uuid()) @db.Uuid
+  name String
+  slug String @unique
+
+  productSpecies ProductSpecies[]
+
+  @@map("species")
+}
+
+model Image {
+  id       String @id @default(uuid()) @db.Uuid
+  provider String
+  publicId String @unique @map("public_id")
+  url      String
+  format   String
+  width    Int
+  height   Int
+
+  productImages ProductImage[]
+
+  @@map("images")
+}
+
+model Product {
+  id              String   @id @default(uuid()) @db.Uuid
+  sku             String   @unique
+  name            String
+  slug            String   @unique
+  description     String?
+  netContentValue Decimal? @db.Decimal(10, 2) @map("net_content_value")
+  netContentUnit  String?  @map("net_content_unit")
+  attributes      Json?
+  isActive        Boolean  @default(true) @map("is_active")
+  isPublished     Boolean  @default(false) @map("is_published")
+  categoryId      String   @db.Uuid @map("category_id")
+  brandId         String?  @db.Uuid @map("brand_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  category       Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  brand          Brand?           @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  productSpecies ProductSpecies[]
+  productImages  ProductImage[]
+
+  @@index([categoryId])
+  @@index([brandId])
+  @@index([isActive, isPublished])
+  @@map("products")
+}
+
+model ProductSpecies {
+  productId String @db.Uuid @map("product_id")
+  speciesId String @db.Uuid @map("species_id")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  species Species @relation(fields: [speciesId], references: [id], onDelete: Cascade)
+
+  @@id([productId, speciesId])
+  @@map("product_species")
+}
+
+model ProductImage {
+  productId String  @db.Uuid @map("product_id")
+  imageId   String  @db.Uuid @map("image_id")
+  isPrimary Boolean @default(false) @map("is_primary")
+  sortOrder Int     @default(0) @map("sort_order")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  image   Image   @relation(fields: [imageId], references: [id], onDelete: Cascade)
+
+  @@id([productId, imageId])
+  @@map("product_images")
+}
